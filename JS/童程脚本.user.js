@@ -25,8 +25,8 @@
             if(replaybtn != null && $(replaybtn).find("input") != null){
                 $(replaybtn).remove();
             }
-			      var shuiYin = $("div.jw-marquee.jw-marquee-extension")
-			      if(shuiYin != null && shuiYin != ''){
+			var shuiYin = $("div.jw-marquee.jw-marquee-extension")
+			if(shuiYin != null && shuiYin != ''){
                 shuiYin.remove();
             }
         },5000);
