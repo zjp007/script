@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         童程xuexi、tmooc脚本
 // @namespace    http://tampermonkey.net/
-// @version      0.7
+// @version      0.8
 // @description  童程xuexi见面课挂机脚本、童程tmooc去掉视频暂停按钮脚本
 // @author       You
 // @match        *://xuexi.tmooc.cn/*
@@ -35,8 +35,71 @@
 				+'input::-webkit-inner-spin-button{'
 				+'-webkit-appearance: none !important;'
 				+'margin: 0;}'
+		css += '.removeLi{position:absolute;right:8px}';
+		css += '.removeLi:hover{color:red;}';
 
 	   loadStyle(css)
+	}
+	// 获取cookie值
+	function getCookie(name) {
+		var prefix = name + "="
+		var start = document.cookie.indexOf(prefix)
+	 
+		if (start == -1) {
+			return null;
+		}
+	 
+		var end = document.cookie.indexOf(";", start + prefix.length)
+		if (end == -1) {
+			end = document.cookie.length;
+		}
+	 
+		var value = document.cookie.substring(start + prefix.length, end)
+		return unescape(value);
+	}
+	// 将字符串分隔为数组
+	function splitStrToArray(str, splitStr){
+		var returnArray = [];
+		if (str != undefined && str != null && str != ''){
+			returnArray = str.split(splitStr);
+		}
+		return returnArray
+	}
+	// 根据浏览器存储的值初始化倍速按钮
+	function initSpeedBtn(ulDom){
+		// 登录用户名
+		var cookieName = getCookie("loginName");
+		// 获取存储的倍数值
+		var speedStorge = localStorage.getItem(cookieName);
+		var userSpeedArry = splitStrToArray(speedStorge, ",");
+		if (userSpeedArry != null && userSpeedArry != '' ){
+			for (var m = userSpeedArry.length-1;m >=0;m--){
+				ulDom.prepend('<li data-sp="' + userSpeedArry[m] + '" class="" >' + userSpeedArry[m] + '倍<i class="removeLi">×</i></li>')
+			}
+		}else{
+			ulDom.prepend('<li data-sp="2.5" class="" >2.5倍<i class="removeLi">×</i></li>')
+			ulDom.prepend('<li data-sp="3.0" class="" >3倍<i class="removeLi">×</i></li>')
+		}
+	}
+	// 存储倍速到
+	function saveSpeedStorge(){
+		// 登录用户名
+		var cookieName = getCookie("loginName");
+		var data = "";
+		var liArray = $("ul.ccH5spul li");
+		if(liArray.length > 0){
+			var liLength = liArray.length;
+			var count = 1;
+			while (liLength > 6){
+				var li = $(liArray[count]);
+				data += li.attr("data-sp") + ",";
+				count++;
+				liLength--;
+			}
+		}
+		data = data.substring(0,data.length-1)
+		console.log(data);
+		localStorage.setItem(cookieName,data)
 	}
     // 点击继续学习方法
     function clickStudyBtn(){
@@ -85,8 +148,7 @@
 			var liArray = $("ul.ccH5spul li");
 			if (liArray.length <= 5){
 				var ulDom = $("ul.ccH5spul");
-				ulDom.prepend('<li data-sp="2.5" class="" >2.5倍</li>')
-				ulDom.prepend('<li data-sp="3.0" class="" >3倍</li>')
+				initSpeedBtn(ulDom);
 				var mySelf = '<li id="speeedLi" class="" >'+
 						'<i class="addIDom" style="display: inline; onmouseover">+</i>' + 
 						'<input id="addSpeedInput" class="add-speed-entry" type="number" max="16" step="0.5" title="增加新的倍数值" min="3.5" style="display: none;"></li>';
@@ -107,7 +169,8 @@
 				event.preventDefault();
 				var videoSpeed = $('#addSpeedInput').val();
 				//回车执行添加倍速
-				$('#addSpeedInput').parent().after('<li data-sp="' + videoSpeed + '" class="">' + videoSpeed + '倍</li>');
+				$('#addSpeedInput').parent().after('<li data-sp="' + videoSpeed + '" class="">' + videoSpeed 
+									+ '倍<i class="removeLi">×</i></li>');
 				// 给新增的li（第二个li）添加点击事件
 				$($("ul.ccH5spul li")[1]).click(function(){
 						$("ul.ccH5spul li").removeClass("selected")
@@ -115,6 +178,13 @@
 						$("span.ccH5sp").text($(this).text())
 						$("video")[0].playbackRate=Number($(this).attr("data-sp"));
 				});
+				// 
+				var removeIbtn = $("i.removeLi");
+				$(removeIbtn[0]).click(function(){
+					$(this).parent().remove();
+						saveSpeedStorge();
+				})
+				saveSpeedStorge();
 			}
 		});
 		// 给倍速按钮添加点击事件绑定（样式切换，视频速度切换）
@@ -126,8 +196,13 @@
 					li.click(function(){
 						$("ul.ccH5spul li").removeClass("selected")
 						$(this).addClass("selected");
-						$("span.ccH5sp").text($(this).text())
+						var speedText = $(this).text();
+						if(speedText.indexOf("×") > -1){
+							speedText = speedText.substring(0,speedText.length-1);
+						}
+						$("span.ccH5sp").text(speedText)
 						$("video")[0].playbackRate=Number($(this).attr("data-sp"));
+						
 					});
 				}
 			}
@@ -146,8 +221,17 @@
 					});
 			}
 		}
-		
-		
+		// 给删除i标记绑定事件
+		var removeIbtn = $("i.removeLi");
+		if (removeIbtn != undefined && removeIbtn.length > 0){
+			for (var n = 0;n < removeIbtn.length;n++){
+				var removeI = $(removeIbtn[n]);
+					removeI.click(function(){
+						$(this).parent().remove();
+						saveSpeedStorge();
+					});
+			}
+		}
 		// 加号，鼠标移入移出不生效
 		var addIdom = $("i.addIDom");
 		// 倍速输入框，鼠标移入移出不生效
