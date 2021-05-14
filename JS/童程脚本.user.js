@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         童程xuexi、tmooc脚本
 // @namespace    http://tampermonkey.net/
-// @version      0.5
+// @version      0.7
 // @description  童程xuexi见面课挂机脚本、童程tmooc去掉视频暂停按钮脚本
 // @author       You
 // @match        *://xuexi.tmooc.cn/*
@@ -13,6 +13,31 @@
 (function() {
     'use strict';
     console.log("童程脚本")
+	// 添加自定义样式到<head>标记中
+	function loadStyle(css) {
+	  var style = document.createElement('style');
+	  style.type = 'text/css';
+	  style.rel = 'stylesheet';
+	  style.appendChild(document.createTextNode(css));
+	  var head = document.getElementsByTagName('head')[0];
+	  head.appendChild(style);
+
+   }
+   //自定义样式
+	function addCss(){
+		var css = '.add-speed-entry{font-size:inherit;'
+			  + 'color:inherit;line-height:inherit;background:transparent;'
+			  + 'outline:none;width:100%;border:none;text-align:center;}';
+		css += '.add-speed-entry[type=number]{-moz-appearance:textfield;user-select:initial;'
+			+'touch-action:manipulation;-webkit-appearance:none;text-decoration:none;overflow:visible;'
+			+'}';
+		css += 'input::-webkit-outer-spin-button,'
+				+'input::-webkit-inner-spin-button{'
+				+'-webkit-appearance: none !important;'
+				+'margin: 0;}'
+
+	   loadStyle(css)
+	}
     // 点击继续学习方法
     function clickStudyBtn(){
         var timeFlag = setInterval (function(){
@@ -55,16 +80,21 @@
 	// 添加高倍速选择,有延时
 	function addVideoSpeed(){
 		var timeFlag = setInterval (function(){
-			var ulDom = $("ul.ccH5spul");
-			ulDom.prepend('<li data-sp="2.5" class="" >2.5倍</li>')
-			ulDom.prepend('<li data-sp="3.0" class="" >3倍</li>')
-			var mySelf = '<li id="speeedLi" class="" >'+
-					'<i class="addIDom" style="display: inline; onmouseover">+</i>' + 
-					'<input id="addSpeedInput" type="number" max="16" step="0.5" title="增加新的倍数值" min="3.5" style="display: none;"></li>';
-			ulDom.prepend(mySelf);
-			eventBind();
-			console.log("speed add");
-			if (ulDom.length >= 0){
+			// 部分视频不会重新加载整个页面，需要进行判断
+			// 已经添加自定义倍速的页面，不再进行添加
+			var liArray = $("ul.ccH5spul li");
+			if (liArray.length <= 5){
+				var ulDom = $("ul.ccH5spul");
+				ulDom.prepend('<li data-sp="2.5" class="" >2.5倍</li>')
+				ulDom.prepend('<li data-sp="3.0" class="" >3倍</li>')
+				var mySelf = '<li id="speeedLi" class="" >'+
+						'<i class="addIDom" style="display: inline; onmouseover">+</i>' + 
+						'<input id="addSpeedInput" class="add-speed-entry" type="number" max="16" step="0.5" title="增加新的倍数值" min="3.5" style="display: none;"></li>';
+				ulDom.prepend(mySelf);
+				eventBind();
+				console.log("speed add");
+			}
+			if (liArray.length > 5){
 				clearInterval(timeFlag);
 			}
 		},1000);
@@ -104,15 +134,20 @@
 		}
 		// 右侧视频列表，点击后会重新加载视频元素，重新添加倍速按钮
 		var rightUlArray = $("ul.video-list li");
+		if (rightUlArray.length <= 0){
+			// robot.tmooc.cn适配
+			rightUlArray = $("#video-list li");
+		}
 		if(rightUlArray.length > 0){
 			for (var j = 0;j < rightUlArray.length;j++){
 				var rightLi = $(rightUlArray[j]);
 					rightLi.click(function(){
-						console.log("rightUl click")
 						addVideoSpeed();
 					});
 			}
 		}
+		
+		
 		// 加号，鼠标移入移出不生效
 		var addIdom = $("i.addIDom");
 		// 倍速输入框，鼠标移入移出不生效
@@ -122,6 +157,7 @@
 		speeedLiDom.mouseenter(function(){
             addIdom[0].style.display="none";
 			speedInput[0].style.display="inline";
+			speedInput.attr("autofocus",'true');
         });
         speeedLiDom.mouseleave(function(){
             addIdom[0].style.display="inline";
@@ -130,11 +166,12 @@
 	}
 	// Your code here...
 	$(function(){
-		//if (window.location.href.startsWith('http://xuexi.tmooc.cn')) {
-		clickStudyBtn();
 		removeCannotPaste();
-		//}
+		if (window.location.href.indexOf('xuexi.tmooc.cn')>-1) {
+			clickStudyBtn();
+		}
 		if (window.location.href.indexOf('code.tmooc.cn') > -1 || window.location.href.indexOf('robot.tmooc.cn')>-1){
+			addCss();
 			addVideoSpeed();
 		}
 	})
